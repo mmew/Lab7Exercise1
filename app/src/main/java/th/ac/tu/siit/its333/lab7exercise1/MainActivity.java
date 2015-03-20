@@ -10,6 +10,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -28,6 +29,8 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
     }
+   long time;
+    int bid;
 
     @Override
     protected void onResume() {
@@ -39,11 +42,32 @@ public class MainActivity extends ActionBarActivity {
     public void buttonClicked(View v) {
         int id = v.getId();
         WeatherTask w = new WeatherTask();
+        long currenttime = System.currentTimeMillis();
         switch (id) {
             case R.id.btBangkok:
-                w.execute("http://ict.siit.tu.ac.th/~cholwich/bangkok.json", "Bangkok Weather");
+                if (bid != id || currenttime - time>= 60000) {
+                    w.execute("http://ict.siit.tu.ac.th/~cholwich/bangkok.json", "Bangkok Weather");
+                    bid = id;
+                    time =currenttime;
+                }
                 break;
+            case R.id.btPathum:
+                if (bid != id || currenttime -time>= 60000) {
+                    w.execute("http://ict.siit.tu.ac.th/~cholwich/pathumthani.json", "Pathumthani Weather");
+                    bid = id;
+                    time = currenttime;
+                }
+                break;
+            case R.id.btNon:
+                if (bid != id || currenttime -time>= 60000) {
+                    w.execute("http://ict.siit.tu.ac.th/~cholwich/nonthaburi.json", "Nonthaburi Weather");
+                    bid = id;
+                    time=currenttime;
+                }
+                break;
+
         }
+
     }
 
     @Override
@@ -72,6 +96,11 @@ public class MainActivity extends ActionBarActivity {
         String errorMsg = "";
         ProgressDialog pDialog;
         String title;
+        double temp;
+        Integer humidity;
+        double temp_min;
+        double temp_max;
+        String cloud;
 
         double windSpeed;
 
@@ -105,6 +134,15 @@ public class MainActivity extends ActionBarActivity {
                     JSONObject jWeather = new JSONObject(buffer.toString());
                     JSONObject jWind = jWeather.getJSONObject("wind");
                     windSpeed = jWind.getDouble("speed");
+
+                    JSONObject jMain = jWeather.getJSONObject("main");
+                    temp = jMain.getDouble("temp");
+                    temp_min = jMain.getDouble("temp_min");
+                    temp_max = jMain.getDouble("temp_max");
+                    humidity = jMain.getInt("humidity");
+
+                    JSONArray jCloud = jWeather.getJSONArray("weather");
+                    cloud = jCloud.getJSONObject(0).getString("main");
                     errorMsg = "";
                     return true;
                 }
@@ -126,7 +164,7 @@ public class MainActivity extends ActionBarActivity {
 
         @Override
         protected void onPostExecute(Boolean result) {
-            TextView tvTitle, tvWeather, tvWind;
+            TextView tvTitle, tvWeather, tvWind,tvTemp,tvHumid;
             if (pDialog.isShowing()) {
                 pDialog.dismiss();
             }
@@ -134,10 +172,20 @@ public class MainActivity extends ActionBarActivity {
             tvTitle = (TextView)findViewById(R.id.tvTitle);
             tvWeather = (TextView)findViewById(R.id.tvWeather);
             tvWind = (TextView)findViewById(R.id.tvWind);
+            tvTemp = (TextView)findViewById(R.id.tvTemp);
+            tvHumid = (TextView)findViewById(R.id.tvHumid);
+
 
             if (result) {
+                temp=temp-273.15;
+                temp_min = temp_min -273.15;
+                temp_max = temp_max - 273.15;
                 tvTitle.setText(title);
                 tvWind.setText(String.format("%.1f", windSpeed));
+                tvWeather.setText(cloud);
+                tvHumid.setText(String.format("%d",humidity)+ "%");
+                tvTemp.setText(String.format("%.1f", temp)+"(max = "+String.format("%.1f",temp_max)+","+"min = "+String.format("%.1f",temp_min)+")");
+
             }
             else {
                 tvTitle.setText(errorMsg);
